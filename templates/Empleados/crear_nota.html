@@ -54,20 +54,20 @@
             <!-- Contenedor de notas -->
             <div id="listaNotas">
                 {% for nota in notas %}
-                <div class="nota-item mb-3 p-3 border rounded shadow-sm {% if nota.Estado == 'Completada' %}nota-completada{% endif %}" 
-                     data-estado="{% if nota.Estado == 'Completada' %}completada{% else %}pendiente{% endif %}">
+                <div class="nota-item mb-3 p-3 border rounded shadow-sm {% if nota.estado == 'Completada' %}nota-completada{% endif %}" 
+                     data-estado="{% if nota.estado == 'Completada' %}completada{% else %}pendiente{% endif %}">
                     <div class="row align-items-center">
                         <div class="col-md-1 text-center">
                             <input type="checkbox" class="form-check-input nota-checkbox" 
-                                   data-nota-id="{{ nota.Id_Nota }}" 
-                                   {% if nota.Estado == 'Completada' %}checked{% endif %}>
+                                   data-nota-id="{{ nota.id_nota }}" 
+                                   {% if nota.estado == 'Completada' %}checked{% endif %}>
                         </div>
                         <div class="col-md-8">
-                            <h6 class="mb-1 {% if nota.Estado == 'Completada' %}text-decoration-line-through text-muted{% endif %}">
-                                {{ nota.Asunto }}
+                            <h6 class="mb-1 {% if nota.estado == 'Completada' %}text-decoration-line-through text-muted{% endif %}">
+                                {{ nota.asunto }}
                             </h6>
                             <small class="text-muted">
-                                <i class="bi bi-calendar"></i> {{ nota.FechaDelAsunto.strftime('%d/%m/%Y') }}
+                                <i class="bi bi-calendar"></i> {{ nota.fechaDelAsunto.strftime('%d/%m/%Y') }}
                                 {% if nota.nombre_empleado %}
                                 | <i class="bi bi-person"></i> {{ nota.nombre_empleado }}
                                 {% endif %}
