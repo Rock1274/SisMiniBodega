@@ -112,13 +112,11 @@ def render_template_ajax(template, **kwargs):
 
 def get_db_connection():
     try:
-        # 1. Intentar conectar usando la URL completa (Ideal para Render)
         database_url = os.environ.get("DATABASE_URL")
         
         if database_url:
             conn = psycopg2.connect(database_url)
         else:
-            # 2. En tu PC local, ahora tomará los valores DIRECTOS de tu archivo .env
             conn = psycopg2.connect(
                 host=os.environ.get("DB_HOST"),
                 database=os.environ.get("DB_NAME"),
