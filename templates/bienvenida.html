@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <button class="notification-btn{% if alertas_stock %} pulse{% endif %}" onclick="showStockAlert();">
+        <i class="bi bi-bell"></i>
+    </button>
+
+    <div id="stock-alert-overlay" class="stock-alert-overlay shadow" style="display:none;">
+        <button class="close-alert" onclick="hideStockAlert();">&times;</button>
+        <h5>Stock bajo</h5>
+        <ul>
+            {% for p in alertas_stock %}
+            <li>{{ p[0] }} - {{ p[1] }}</li>
+            {% else %}
+            <li>No hay alertas</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <h2>Dashboard MiniBodega</h2>
+
+    <div class="cards">
+        <div class="card">
+            <h4>Ventas Hoy</h4>
+            <p>C$ {{ ventas_hoy }}</p>
+        </div>
+        <div class="card">
+            <h4>Productos</h4>
+            <p>{{ total_productos }}</p>
+        </div>
+        <div class="card">
+            <h4>Compras</h4>
+            <p>{{ total_compras }}</p>
+        </div>
+        <div class="card">
+            <h4>Stock Bajo</h4>
+            <p>{{ alertas_stock|length }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+
+        <div class="box">
+            <h5>Ventas por Día</h5>
+            <canvas id="ventasChart"></canvas>
+        </div>
+
+        <div class="box">
+            <h5>Última Compra</h5>
+            {% if ultima_compra and ultima_compra.fecha %}
+            <p>📅 {{ ultima_compra.fecha.strftime('%d/%m/%Y') }}</p>
+            <p>🏢 Proveedor: {{ ultima_compra.proveedor }}</p>
+            <p>💰 <strong>C$ {{ '{:,.2f}'.format(ultima_compra.total) }}</strong></p>
+            {% else %}
+            <p>No hay compras registradas</p>
+            {% endif %}
+        </div>
+
+        <div class="box">
+            <h5>Empleados</h5>
+            <ul>
+                {% for e in empleados %}
+                <li>{{ e[0] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // PASAR DATOS DESDE JINJA A JAVASCRIPT SIN ERRORES EN EL EDITOR
+    // Envolver entre comillas simples hace que el linter de VS Code vea un String válido.
+    // Usamos comillas dobles para el string alternativo de Jinja ("[]") para no romper la cadena de JS.
+    const labels = JSON.parse('{{ labels|tojson|safe if labels else "[]" }}');
+    const datos = JSON.parse('{{ datos|tojson|safe if datos else "[]" }}');
+
+    function showStockAlert() {
+        const overlay = document.getElementById('stock-alert-overlay');
+        if (overlay) overlay.style.display = 'block';
+    }
+
+    function hideStockAlert() {
+        const overlay = document.getElementById('stock-alert-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function initDashboard() {
+        const canvas = document.getElementById('ventasChart');
+        if (!canvas) return; // Si el canvas no está en el DOM actual (por navegación AJAX), sale de la función de forma segura
+
+        // Evitar duplicados del gráfico o el error 'Canvas is already in use' al recargar vistas por AJAX
+        if (window.chart && typeof window.chart.destroy === 'function') {
+            window.chart.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        window.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ventas',
+                    data: datos,
+                    borderColor: '#db1414',
+                    backgroundColor: 'rgba(219, 20, 20, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Control de carga seguro para cargas tradicionales o directas
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    } else {
+        initDashboard();
+    }
+
+    // Escuchador para la recarga parcial de contenedores en tu sistema AJAX
+    window.addEventListener('contentLoaded', initDashboard);
+</script>
+{% endblock %}
