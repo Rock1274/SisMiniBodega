@@ -298,7 +298,7 @@ def login():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM Usuario WHERE nusuario = %s AND contraseña = %s', (nusuario, contrasena_codificada))
+        cursor.execute('SELECT * FROM Usuario WHERE nusuario = %s AND contrasena = %s', (nusuario, contrasena_codificada))
         print(f"Usuario: {nusuario}, Contraseña: {contrasena_codificada}")
         user = cursor.fetchone()
         conn.close()
