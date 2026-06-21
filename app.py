@@ -112,11 +112,17 @@ def render_template_ajax(template, **kwargs):
 
 def get_db_connection():
     try:
+        # Buscamos la variable unificada en Render
         database_url = os.environ.get("DATABASE_URL")
         
         if database_url:
+            # Conexión directa y estable usando la URL completa
             conn = psycopg2.connect(database_url)
+            print("Conexión a PostgreSQL en Supabase exitosa mediante DATABASE_URL.")
+            return conn
         else:
+            # Respaldo por si acaso, pero idealmente Render usará la de arriba
+            print("DATABASE_URL no encontrada. Intentando conexión por parámetros individuales...")
             conn = psycopg2.connect(
                 host=os.environ.get("DB_HOST"),
                 database=os.environ.get("DB_NAME"),
@@ -124,9 +130,8 @@ def get_db_connection():
                 password=os.environ.get("DB_PASSWORD"),
                 port=os.environ.get("DB_PORT")
             )
-
-        print("Conexión a PostgreSQL en Supabase exitosa.")
-        return conn
+            print("Conexión a PostgreSQL en Supabase exitosa por parámetros.")
+            return conn
 
     except Exception as e:
         print(f"Error de conexión: {e}")
