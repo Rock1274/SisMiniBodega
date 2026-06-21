@@ -114,7 +114,7 @@ def get_db_connection():
     try:
         # Conectamos usando los parámetros individuales pero forzando el comando del proyecto
         conn = psycopg2.connect(
-            host="aws-0-us-east-1.pooler.supabase.com",
+            host="aws-1-us-east-1.pooler.supabase.com",
             database="postgres",
             user="postgres.enmlbtjmtqkhdoprdlci", # El usuario original
             password="Machado_127412",
