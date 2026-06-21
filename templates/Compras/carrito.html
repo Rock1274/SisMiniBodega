@@ -2,13 +2,13 @@
 {% block content %}
 <div class="container mt-4">
     <h2 class="text-center text-success pag-titulo">Carrito - Nueva Compra</h2>
-    <p style="color: rgba(255, 255, 255, 0.7);"><strong>Fecha:</strong> {{ compra.FechaDeCompra }}</p>
+    <p style="color: rgba(255, 255, 255, 0.7);"><strong>Fecha:</strong> {{ compra[1] }}</p>
 
     <!-- 🔎 Buscar producto -->
-    <form method="GET" action="{{ url_for('carrito', id_compra=compra.Id_Compra) }}" class="mb-3 d-flex">
+    <form method="GET" action="{{ url_for('carrito', id_compra=compra[0]) }}" class="mb-3 d-flex">
         <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar producto" value="{{ buscar }}">
         <button type="submit" class="btn btn-primary me-2">Buscar</button>
-        <a href="{{ url_for('carrito', id_compra=compra.Id_Compra) }}" class="btn btn-secondary">Ver todos</a>
+        <a href="{{ url_for('carrito', id_compra=compra[0]) }}" class="btn btn-secondary">Ver todos</a>
     </form>
 
     <!-- 📦 Productos disponibles -->
@@ -25,10 +25,10 @@
         <tbody>
             {% for p in paquetes %}
             <tr>
-                <td>{{ p.Descripcion }}</td>
-                <td>{{ "%.2f"|format(p.PrecioCompra_Paq) }}</td>
-                <td><input type="number" id="cant_{{ p.Id_Paquete }}" value="1" min="1" class="form-control" style="width: 80px;"></td>
-                <td><button class="btn btn-success" onclick="agregarProducto('{{ p.Id_Paquete }}')">Agregar</button></td>
+                <td>{{ p[1] }}</td>
+                <td>{{ "%.2f"|format(p[2]) }}</td>
+                <td><input type="number" id="cant_{{ p[0] }}" value="1" min="1" class="form-control" style="width: 80px;"></td>
+                <td><button class="btn btn-success" onclick="agregarProducto('{{ p[0] }}')">Agregar</button></td>
             </tr>
             {% else %}
             <tr><td colspan="4" class="text-center">No se encontraron productos</td></tr>
@@ -67,8 +67,8 @@
 
     <!-- ✅ Finalizar o cancelar -->
     <div class="d-flex justify-content-between mt-3">
-        <a href="{{ url_for('cancelar_compra', id_compra=compra.Id_Compra) }}" class="btn btn-secondary">Cancelar compra</a>
-        <a href="{{ url_for('finalizar_compra', id_compra=compra.Id_Compra) }}" class="btn btn-primary">Finalizar compra</a>
+        <a href="{{ url_for('cancelar_compra', id_compra=compra[0]) }}" class="btn btn-secondary">Cancelar compra</a>
+        <a href="{{ url_for('finalizar_compra', id_compra=compra[0]) }}" class="btn btn-primary">Finalizar compra</a>
     </div>
 </div>
 
@@ -76,7 +76,7 @@
 <script>
 window.addEventListener("beforeunload", function (event) {
     // Detecta si el usuario intenta cerrar, recargar o salir de la página
-    navigator.sendBeacon("/carrito/{{ compra.Id_Compra }}/cancelar_exit");
+    navigator.sendBeacon("/carrito/{{ compra[0] }}/cancelar_exit");
 });
 
 // Detecta clics en enlaces del sidebar u otros
@@ -86,7 +86,7 @@ document.querySelectorAll("a").forEach(link => {
 
         // Si el enlace NO es para finalizar la compra o cancelar manualmente
         if (!href.includes("finalizar") && !href.includes("cancelar") && !href.includes("#")) {
-            fetch("/carrito/{{ compra.Id_Compra }}/cancelar_exit", { method: "POST" });
+            fetch("/carrito/{{ compra[0] }}/cancelar_exit", { method: "POST" });
         }
     });
 });
@@ -96,7 +96,7 @@ document.querySelectorAll("a").forEach(link => {
 <script>
 function agregarProducto(idPaquete) {
     const cantidad = document.getElementById(`cant_${idPaquete}`).value;
-    const url = `/carrito/{{ compra.Id_Compra }}/agregar`;
+    const url = `/carrito/{{ compra[0] }}/agregar`;
 
     fetch(url, {
         method: "POST",
@@ -109,7 +109,7 @@ function agregarProducto(idPaquete) {
     .then(response => {
         if (!response.ok) throw new Error("Error al agregar");
         // Actualizar solo la tabla del carrito sin recargar
-        return fetch(`/carrito/{{ compra.Id_Compra }}?partial=1`, {
+        return fetch(`/carrito/{{ compra[0] }}?partial=1`, {
             headers: { 'X-Custom-Ajax-Navigation': 'true' }
         });
     })
@@ -125,7 +125,7 @@ function agregarProducto(idPaquete) {
 }
 
 function eliminarProducto(idDetalle) {
-    const url = `/carrito/{{ compra.Id_Compra }}/eliminar/${idDetalle}`;
+    const url = `/carrito/{{ compra[0] }}/eliminar/${idDetalle}`;
 
     fetch(url, {
         method: "DELETE",
@@ -134,7 +134,7 @@ function eliminarProducto(idDetalle) {
     .then(response => {
         if (!response.ok) throw new Error("Error al eliminar producto");
         // Refresca solo el carrito
-        return fetch(`/carrito/{{ compra.Id_Compra }}?partial=1`, {
+        return fetch(`/carrito/{{ compra[0] }}?partial=1`, {
             headers: { 'X-Custom-Ajax-Navigation': 'true' }
         });
     })
