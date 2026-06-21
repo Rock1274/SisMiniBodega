@@ -13,7 +13,10 @@ import secrets
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 import time
+from dotenv import load_dotenv
 
+    
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta_1234'
@@ -109,19 +112,19 @@ def render_template_ajax(template, **kwargs):
 
 def get_db_connection():
     try:
-        # 1. Intentar conectar usando una URL de conexión completa (Ideal para Render)
+        # 1. Intentar conectar usando la URL completa (Ideal para Render)
         database_url = os.environ.get("DATABASE_URL")
         
         if database_url:
             conn = psycopg2.connect(database_url)
         else:
-            # 2. Si no existe DATABASE_URL, usa los parámetros individuales (Para tus pruebas locales)
+            # 2. En tu PC local, ahora tomará los valores DIRECTOS de tu archivo .env
             conn = psycopg2.connect(
-                host=os.environ.get("DB_HOST", "aws-0-us-east-1.pooler.supabase.com"),
-                database=os.environ.get("DB_NAME", "postgres"),
-                user=os.environ.get("DB_USER", "postgres.enmlbtjmtqkhdoprdlci"), 
-                password=os.environ.get("DB_PASSWORD", "Machado_127412"),
-                port=os.environ.get("DB_PORT", "6543")
+                host=os.environ.get("DB_HOST"),
+                database=os.environ.get("DB_NAME"),
+                user=os.environ.get("DB_USER"), 
+                password=os.environ.get("DB_PASSWORD"),
+                port=os.environ.get("DB_PORT")
             )
 
         print("Conexión a PostgreSQL en Supabase exitosa.")
@@ -129,12 +132,6 @@ def get_db_connection():
 
     except Exception as e:
         print(f"Error de conexión: {e}")
-        raise
-
-    except Exception as e:
-
-        print(f"Error de conexión: {e}")
-
         raise
 
 def verificar_sesion_recordada():
