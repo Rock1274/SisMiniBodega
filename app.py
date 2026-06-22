@@ -13,10 +13,6 @@ import secrets
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 import time
-from dotenv import load_dotenv
-
-    
-load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'fallback_super_secreta_dev_key')
@@ -124,14 +120,28 @@ def render_template_ajax(template, **kwargs):
 
 def get_db_connection():
     try:
+
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
+
+        db_password = os.environ.get("DB_PASSWORD")
+        project_id = os.environ.get("DB_PROJECT_ID")
+
+        pooler_host = "aws-1-us-east-1.pooler.supabase.com"
+        db_user = f"postgres.{project_id}"
+        options_param = f"-c project={project_id}"
+
         # Conectamos usando los parámetros individuales pero forzando el comando del proyecto
         conn = psycopg2.connect(
-            host="aws-1-us-east-1.pooler.supabase.com",
+            host=pooler_host,
             database="postgres",
-            user="postgres.enmlbtjmtqkhdoprdlci", # El usuario original
-            password="Machado_127412",
+            user=db_user,
+            password=db_password,
             port="6543",
-            options="-c project=enmlbtjmtqkhdoprdlci" # <--- ESTO ES LO QUE OBLIGA AL POOLER A DEJARTE PASAR
+            options=options_param
         )
         
         print("Conexión a PostgreSQL en Supabase exitosa.")
