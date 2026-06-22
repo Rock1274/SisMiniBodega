@@ -46,40 +46,40 @@
                 <form method="post" enctype="multipart/form-data" data-ajax="true">
                     <div class="mb-3">
                         <label for="Descripcion" class="form-label">Descripción</label>
-                        <input type="text" name="Descripcion" id="Descripcion" class="form-control" value="{{ paquete.Descripcion }}" required>
+                        <input type="text" name="Descripcion" id="Descripcion" class="form-control" value="{{ paquete[1] }}" required>
                     </div>
                     <div class="mb-3">
                         <label for="TipoPaquete" class="form-label">Tipo de Paquete</label>
                         <select name="TipoPaquete" id="TipoPaquete" class="form-select" required>
-                            <option value="6" {% if paquete.TipoPaquete == 6 or paquete.TipoPaquete == '6' %}selected{% endif %}>6 unidades</option>
-                            <option value="8" {% if paquete.TipoPaquete == 8 or paquete.TipoPaquete == '8' %}selected{% endif %}>8 unidades</option>
-                            <option value="12" {% if paquete.TipoPaquete == 12 or paquete.TipoPaquete == '12' %}selected{% endif %}>12 unidades</option>
-                            <option value="24" {% if paquete.TipoPaquete == 24 or paquete.TipoPaquete == '24' %}selected{% endif %}>24 unidades</option>
+                            <option value="6" {% if paquete[2] == 6 or paquete[2] == '6' %}selected{% endif %}>6 unidades</option>
+                            <option value="8" {% if paquete[2] == 8 or paquete[2] == '8' %}selected{% endif %}>8 unidades</option>
+                            <option value="12" {% if paquete[2] == 12 or paquete[2] == '12' %}selected{% endif %}>12 unidades</option>
+                            <option value="24" {% if paquete[2] == 24 or paquete[2] == '24' %}selected{% endif %}>24 unidades</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="UnidadesSobrantes" class="form-label">Unidades Sobrantes</label>
-                        <input type="number" step="1" name="UnidadesSobrantes" id="UnidadesSobrantes" class="form-control" value="{{ paquete.UnidadesSobrantes }}" min="0" max="24">
+                        <input type="number" step="1" name="UnidadesSobrantes" id="UnidadesSobrantes" class="form-control" value="{{ paquete[4] }}" min="0" max="24">
                         <div class="invalid-feedback" id="unidades-error"></div>
                     </div>
                     <div class="mb-3">
                         <label for="PaquetesCompletos" class="form-label">Paquetes Completos</label>
-                        <input type="number" step="1" name="PaquetesCompletos" id="Inventario" class="form-control" value="{{ paquete.PaquetesCompletos }}">
+                        <input type="number" step="1" name="PaquetesCompletos" id="Inventario" class="form-control" value="{{ paquete[5] }}">
                     </div>
                     <div class="mb-3">
                         <label for="PrecioVenta_Paq" class="form-label">Precio de Venta</label>
-                        <input type="number" name="PrecioVenta_Paq" id="PrecioVenta_Paq" class="form-control" value="{{ paquete.PrecioVenta_Paq }}">
+                        <input type="number" name="PrecioVenta_Paq" id="PrecioVenta_Paq" class="form-control" value="{{ paquete[6] }}">
                     </div>
                     <div class="mb-3">
                         <label for="PrecioCompra_Paq" class="form-label">Precio de Compra</label>
-                        <input type="number" step="0.01" name="PrecioCompra_Paq" id="PrecioCompra_Paq" class="form-control" value="{{ paquete.PrecioCompra_Paq }}">
+                        <input type="number" step="0.01" name="PrecioCompra_Paq" id="PrecioCompra_Paq" class="form-control" value="{{ paquete[7] }}">
                     </div>
                     <div class="mb-3">
                         <label for="imagen" class="form-label">Nueva Imagen del Producto (opcional)</label>
                         <input type="file" class="form-control" name="imagen" id="imagen" accept="image/*">
                         
                         <!-- Vista previa de la imagen actual -->
-                        {% set nombre_archivo = paquete.Descripcion | sanitize ~ '.png' %}
+                        {% set nombre_archivo = paquete[1] | sanitize ~ '.png' %}
                         {% set ruta_imagen = '/static/Paquetes/' ~ nombre_archivo %}
                         {% set ruta_por_defecto = '/static/Paquetes/PorDefecto.webp' %}
                         

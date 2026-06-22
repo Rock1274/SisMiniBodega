@@ -19,13 +19,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'clave_super_secreta_1234'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'fallback_super_secreta_dev_key')
 
 # Configuración para desarrollo - deshabilitar cache
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-CORS(app)  # Permite todas las solicitudes; ajusta para producción
+from flask import abort
+
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB máximo por request
+
+@app.errorhandler(413)
+def too_large(e):
+    flash('❌ El archivo es demasiado grande (máximo 5MB)', 'danger')
+    return redirect(request.referrer or url_for('ver_paquetes'))
+
+origenes = os.environ['URL_FRONTEND']
+if os.environ.get('FLASK_ENV') == 'development':
+    origenes.append('http://localhost:5000')
+CORS(app, origins=origenes)
 
 # Configuración para subida de archivos
 UPLOAD_FOLDER = os.path.join('static', 'Paquetes')
@@ -79,7 +91,7 @@ def is_ajax_request():
     return request.headers.get('X-Custom-Ajax-Navigation') == 'true'
 
 def render_template_ajax(template, **kwargs):
-    if request.headers.get('X-Custom-Ajax-Navigation') == 'true':
+    if is_ajax_request():
         # Devolver JSON con content y modals para AJAX
         rendered = render_template(template, **kwargs)
         soup = BeautifulSoup(rendered, 'html.parser')
@@ -222,8 +234,8 @@ def validar_email(email):
 
 def enviar_email_gmail(destinatario, codigo):
     """Envía un email con el código de verificación usando Gmail"""
-    remitente = 'soportedebodega.cocacola@gmail.com'  # Email de soporte
-    password = 'haan gkbx pchr zlvs'  # Reemplazar con el App Password de soportedebodega.cocacola@gmail.com
+    remitente = os.environ['GMAIL_USER']
+    password = os.environ['GMAIL_APP_PASSWORD']
 
     if remitente == 'tu_email@gmail.com':
         print("Error: Configura las credenciales de Gmail en la función enviar_email_gmail")
@@ -586,105 +598,84 @@ def ver_paquetes():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Obtener total de paquetes para paginación
+    total = 0
+    paquetes = []
+
     if busqueda:
         if filtro == 'Nombre':
             cursor.execute('SELECT COUNT(*) FROM Paquete WHERE descripcion LIKE %s', (f'%{busqueda}%',))
+            total = cursor.fetchone()[0]
+            total_pages = (total + limit - 1) // limit
+            cursor.execute('''
+                SELECT * FROM Paquete WHERE descripcion LIKE %s
+                ORDER BY id_paquete DESC LIMIT %s OFFSET %s
+            ''', (f'%{busqueda}%', limit, offset))
+            paquetes = cursor.fetchall()
+
         elif filtro == 'Inventario':
             try:
                 if busqueda.startswith('='):
                     valor = float(busqueda[1:])
-                    cursor.execute('SELECT COUNT(*) FROM Paquete WHERE inventario = %s', (valor,))
+                    condicion = 'inventario = %s'
+                    params = (valor,)
                 elif busqueda.startswith('>'):
                     valor = float(busqueda[1:])
-                    cursor.execute('SELECT COUNT(*) FROM Paquete WHERE inventario > %s', (valor,))
+                    condicion = 'inventario > %s'
+                    params = (valor,)
                 elif busqueda.startswith('<'):
                     valor = float(busqueda[1:])
-                    cursor.execute('SELECT COUNT(*) FROM Paquete WHERE inventario < %s', (valor,))
+                    condicion = 'inventario < %s'
+                    params = (valor,)
                 elif '-' in busqueda:
                     min_val, max_val = map(int, busqueda.split('-'))
-                    cursor.execute('SELECT COUNT(*) FROM Paquete WHERE inventario BETWEEN %s AND %s', (min_val, max_val))
+                    condicion = 'inventario BETWEEN %s AND %s'
+                    params = (min_val, max_val)
                 else:
                     valor = float(busqueda)
-                    cursor.execute('SELECT COUNT(*) FROM Paquete WHERE inventario BETWEEN %s AND (%s + 5)', (valor, valor))
+                    condicion = 'inventario BETWEEN %s AND (%s + 5)'
+                    params = (valor, valor)
+
+                cursor.execute(f'SELECT COUNT(*) FROM Paquete WHERE {condicion}', params)
+                total = cursor.fetchone()[0]
+                total_pages = (total + limit - 1) // limit
+
+                cursor.execute(
+                    f'SELECT * FROM Paquete WHERE {condicion} ORDER BY id_paquete DESC LIMIT %s OFFSET %s',
+                    params + (limit, offset)
+                )
+                paquetes = cursor.fetchall()
             except ValueError:
+                flash('❌ Formato de búsqueda de inventario inválido. Usa un número, ">N", "<N", "=N" o "N-M".', 'warning')
                 total = 0
+                total_pages = 0
                 paquetes = []
+
         elif filtro == 'TipoPaquete':
             cursor.execute('SELECT COUNT(*) FROM Paquete WHERE tipopaquete LIKE %s', (f'%{busqueda}%',))
-        else:
-            cursor.execute('SELECT COUNT(*) FROM Paquete')
+            total = cursor.fetchone()[0]
+            total_pages = (total + limit - 1) // limit
+            cursor.execute('''
+                SELECT * FROM Paquete WHERE tipopaquete LIKE %s
+                ORDER BY id_paquete DESC LIMIT %s OFFSET %s
+            ''', (f'%{busqueda}%', limit, offset))
+            paquetes = cursor.fetchall()
+
     else:
         cursor.execute('SELECT COUNT(*) FROM Paquete')
-
-    total_result = cursor.fetchone()
-    total = total_result[0] if total_result else 0
-    total_pages = (total + limit - 1) // limit
-
-    # Buscar paquetes con paginación
-    if busqueda:
-        if filtro == 'Nombre':
-            cursor.execute('''
-                SELECT *
-                FROM Paquete
-                WHERE descripcion LIKE %s
-                ORDER BY id_paquete DESC
-                LIMIT %s OFFSET %s
-            ''', (f'%{busqueda}%', limit, offset))
-        elif filtro == 'Inventario':
-            try:
-                if busqueda.startswith('='):
-                    valor = float(busqueda[1:])
-                    cursor.execute('SELECT * FROM Paquete WHERE inventario = %s ORDER BY id_paquete DESC LIMIT %s OFFSET %s', (valor, limit, offset))
-                elif busqueda.startswith('>'):
-                    valor = float(busqueda[1:])
-                    cursor.execute('SELECT * FROM Paquete WHERE inventario > %s ORDER BY id_paquete DESC LIMIT %s OFFSET %s', (valor, limit, offset))
-                elif busqueda.startswith('<'):
-                    valor = float(busqueda[1:])
-                    cursor.execute('SELECT * FROM Paquete WHERE inventario < %s ORDER BY id_paquete DESC LIMIT %s OFFSET %s', (valor, limit, offset))
-                elif '-' in busqueda:
-                    min_val, max_val = map(int, busqueda.split('-'))
-                    cursor.execute('SELECT * FROM Paquete WHERE inventario BETWEEN %s AND %s ORDER BY id_paquete DESC LIMIT %s OFFSET %s', (min_val, max_val, limit, offset))
-                else:
-                    valor = float(busqueda)
-                    cursor.execute('SELECT * FROM Paquete WHERE inventario BETWEEN %s AND (%s + 5) ORDER BY id_paquete DESC LIMIT %s OFFSET %s', (valor, valor, limit, offset))
-            except ValueError:
-                paquetes = []
-        elif filtro == 'TipoPaquete':
-            cursor.execute('''
-                SELECT *
-                FROM Paquete
-                WHERE tipopaquete LIKE %s
-                ORDER BY id_paquete DESC
-                LIMIT %s OFFSET %s
-            ''', (f'%{busqueda}%', limit, offset))
-        else:
-            cursor.execute('''
-                SELECT *
-                FROM Paquete
-                ORDER BY id_paquete DESC
-                LIMIT %s OFFSET %s
-            ''', (limit, offset))
-    else:
+        total = cursor.fetchone()[0]
+        total_pages = (total + limit - 1) // limit
         cursor.execute('''
-            SELECT *
-            FROM Paquete
-            ORDER BY id_paquete DESC
-            LIMIT %s OFFSET %s
+            SELECT * FROM Paquete ORDER BY id_paquete DESC LIMIT %s OFFSET %s
         ''', (limit, offset))
-
-    paquetes = cursor.fetchall()
-    print("PRIMER PAQUETE:")
-    print(paquetes[0])
-    print(type(paquetes[0]))
+        paquetes = cursor.fetchall()
 
     # Crear paquete (si POST)
     if request.method == 'POST':
         descripcion = request.form['Descripcion']
         tipo = int(request.form['TipoPaquete'])
-        inventario = 0
         unidadessobrantes = int(request.form['UnidadesSobrantes']) if request.form['UnidadesSobrantes'] else 0
         paquetescompletos = int(request.form['PaquetesCompletos']) if request.form['PaquetesCompletos'] else 0
+        inventario = paquetescompletos + (unidadessobrantes / tipo if tipo else 0)
         precio_venta = request.form['PrecioVenta_Paq']
         precio_compra = request.form['PrecioCompra_Paq']
 
@@ -761,9 +752,9 @@ def editar_paquete(id):
     if request.method == 'POST':
         descripcion = request.form['Descripcion']
         tipo = int(request.form['TipoPaquete'])
-        inventario = 0
         unidadessobrantes = int(request.form['UnidadesSobrantes']) if request.form['UnidadesSobrantes'] else 0
         paquetescompletos = int(request.form['PaquetesCompletos']) if request.form['PaquetesCompletos'] else 0
+        inventario = paquetescompletos + (unidadessobrantes / tipo if tipo else 0)
         precio_venta = request.form['PrecioVenta_Paq']
         precio_compra = request.form['PrecioCompra_Paq']
         imagen = request.files.get('imagen')
@@ -772,7 +763,7 @@ def editar_paquete(id):
             flash(f'❌ Las unidades sobrantes ({unidadessobrantes}) no pueden ser mayores que el tipo de paquete ({tipo})', 'danger')
 
             # 🚀 Si es AJAX, devolvemos JSON (NO redirect)
-            if request.headers.get('X-Custom-Ajax-Navigation') == 'true':
+            if is_ajax_request():
                 return jsonify({"redirect": url_for('editar_paquete', id=id)})
 
             return redirect(url_for('editar_paquete', id=id))
@@ -782,28 +773,28 @@ def editar_paquete(id):
         paquete_anterior = cursor.fetchone()
         descripcion_anterior = paquete_anterior[0] if paquete_anterior else None
 
-        # Eliminar la imagen anterior si hay nueva imagen
-        if imagen and imagen.filename != '':
-            if descripcion_anterior:
-                ruta_anterior = os.path.join(app.config['UPLOAD_FOLDER'], f"{sanitize_filename(descripcion_anterior)}.png")
-                if os.path.exists(ruta_anterior):
-                    try:
-                        os.remove(ruta_anterior)
-                    except Exception as e:
-                        print(f"Error al eliminar imagen anterior: {e}")
-
-        # Manejar renombrado de imagen si la descripción cambió
-        if descripcion_anterior and descripcion_anterior != descripcion:
+        # Si la descripción cambió y NO se subió imagen nueva, renombrar el archivo existente
+        if descripcion_anterior and descripcion_anterior != descripcion and not (imagen and imagen.filename != ''):
             nombre_archivo_anterior = f"{sanitize_filename(descripcion_anterior)}.png"
             ruta_anterior = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo_anterior)
-
             nombre_archivo_nuevo = f"{sanitize_filename(descripcion)}.png"
             ruta_nueva = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo_nuevo)
 
-            # Si no hay nueva imagen, renombrar la existente
-            if not (imagen and imagen.filename != ''):
-                if os.path.exists(ruta_anterior) and not os.path.exists(ruta_nueva):
+            if os.path.exists(ruta_anterior) and not os.path.exists(ruta_nueva):
+                try:
                     os.rename(ruta_anterior, ruta_nueva)
+                except OSError as e:
+                    print(f"Error al renombrar imagen: {e}")
+
+        # Si se subió imagen nueva y la descripción cambió, eliminar el archivo del nombre anterior
+        # (manejar_imagen_producto ya se encarga de guardar/crear el del nombre nuevo)
+        if imagen and imagen.filename != '' and descripcion_anterior and descripcion_anterior != descripcion:
+            ruta_anterior = os.path.join(app.config['UPLOAD_FOLDER'], f"{sanitize_filename(descripcion_anterior)}.png")
+            if os.path.exists(ruta_anterior):
+                try:
+                    os.remove(ruta_anterior)
+                except OSError as e:
+                    print(f"Error al eliminar imagen anterior: {e}")
 
         try:
             nombre_archivo = manejar_imagen_producto(descripcion, imagen)
@@ -828,7 +819,7 @@ def editar_paquete(id):
         limpiar_imagenes_huerfanas()
 
         # 🚀 Si es AJAX, regresamos JSON limpio → JS hace navigateTo()
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if is_ajax_request():
             return jsonify({"redirect": url_for('ver_paquetes')})
 
         return redirect(url_for('ver_paquetes'))
