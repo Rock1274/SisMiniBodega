@@ -124,14 +124,18 @@ def render_template_ajax(template, **kwargs):
 
 def get_db_connection():
     try:
+
+        db_password = os.environ.get("DB_PASSWORD")
+        db_user = os.environ.get("DB_USER")
+
         # Conectamos usando los parámetros individuales pero forzando el comando del proyecto
         conn = psycopg2.connect(
             host="aws-1-us-east-1.pooler.supabase.com",
             database="postgres",
-            user="postgres.enmlbtjmtqkhdoprdlci", # El usuario original
-            password="Machado_127412",
+            user=db_user,
+            password=db_password,
             port="6543",
-            options="-c project=enmlbtjmtqkhdoprdlci" # <--- ESTO ES LO QUE OBLIGA AL POOLER A DEJARTE PASAR
+            options=f"-c project={db_user}" # <--- ESTO ES LO QUE OBLIGA AL POOLER A DEJARTE PASAR
         )
         
         print("Conexión a PostgreSQL en Supabase exitosa.")
